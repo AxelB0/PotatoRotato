@@ -1,10 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <title>Strike Data Table</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+        th, td {
+            text-align: center;
+            padding: 10px;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #e1f5fe;
+        }
+        #tableContainer {
+            overflow-x: auto;
+        }
+        h2 {
+            margin-top: 40px;
+        }
+    </style>
 </head>
 <body>
-$END$
+
+<h2>Strike Data Table</h2>
+<textarea id="jsonInput" rows="10" cols="80" placeholder="Paste JSON data here..."></textarea>
+<br>
+<label>Filter strikes ≥ </label>
+<input type="number" id="strikeFilter" value="0">
+<button onclick="displayTable()">Show Table</button>
+
+<div id="tableContainer"></div>
+
+<script>
+    let parsedData = [];
+    let sortOrder = {};
+
+    function displayTable() {
+        const raw = document.getElementById("jsonInput").value;
+        const strikeMin = parseFloat(document.getElementById("strikeFilter").value) || 0;
+
+        try {
+            parsedData = JSON.parse(raw);
+            if (!parsedData.length) return alert("Empty JSON data.");
+
+            const dataType = parsedData[0]?.type || "unknown"; // detect call or put
+            const filteredData = parsedData.filter(item => item.strike >= strikeMin);
+
+            const container = document.getElementById("tableContainer");
+            container.innerHTML = "";
+
+            // Heading based on type
+            const heading = document.createElement("h2");
+            heading.textContent = dataType.toUpperCase() + " Data Table";
+            container.appendChild(heading);
+
+            const table = document.createElement("table");
+            const header = table.insertRow();
+
+            // Columns
+            const columns = ["date", "last", "bid", "ask", "avg", "strike", "weeks", "value/week"];
+            if (dataType === "put") columns.push("%/month"); // extra column for puts
+
+            columns.forEach(col => {
+                const th = document.createElement("th");
+                th.textContent = col;
+                th.onclick = () => sortTable(col, filteredData, dataType);
+                header.appendChild(th);
+            });
+
+            // Rows
+            filteredData.forEach(item => {
+                const row = table.insertRow();
+                const valuePerWeek = item.weeks > 0 ? +(item.avg / item.weeks).toFixed(2) : 0;
+
+                row.insertCell().textContent = item.date;
+                row.insertCell().textContent = item.last;
+                row.insertCell().textContent = item.bid;
+                row.insertCell().textContent = item.ask;
+                row.insertCell().textContent = item.avg;
+                row.insertCell().textContent = item.strike;
+                row.insertCell().textContent = item.weeks;
+                row.insertCell().textContent = valuePerWeek;
+
+                if (dataType === "put") {
+                    row.insertCell().textContent = item.strike > 0 ? +((valuePerWeek / item.strike) * 100).toFixed(2) : 0;
+                }
+            });
+
+            container.appendChild(table);
+        } catch (e) {
+            alert("Invalid JSON. Check your data.");
+        }
+    }
+
+    function sortTable(column, dataArray, dataType) {
+        const numericCols = ["last", "bid", "ask", "avg", "strike", "weeks", "value/week", "%/month"];
+        sortOrder[column] = !sortOrder[column];
+
+        const sortedData = [...dataArray].sort((a, b) => {
+            let aVal, bVal;
+
+            const aValuePerWeek = a.weeks > 0 ? a.avg / a.weeks : 0;
+            const bValuePerWeek = b.weeks > 0 ? b.avg / b.weeks : 0;
+
+            if (column === "value/week") {
+                aVal = aValuePerWeek;
+                bVal = bValuePerWeek;
+            } else if (column === "%/month" && dataType === "put") {
+                aVal = a.strike > 0 ? (aValuePerWeek / a.strike) * 100 : 0;
+                bVal = b.strike > 0 ? (bValuePerWeek / b.strike) * 100 : 0;
+            } else {
+                aVal = a[column];
+                bVal = b[column];
+            }
+
+            if (numericCols.includes(column)) {
+                return sortOrder[column] ? aVal - bVal : bVal - aVal;
+            } else {
+                return sortOrder[column] ? new Date(aVal) - new Date(bVal) : new Date(bVal) - new Date(aVal);
+            }
+        });
+
+        const table = document.querySelector("#tableContainer table");
+        for (let i = table.rows.length - 1; i > 0; i--) table.deleteRow(i);
+
+        sortedData.forEach(item => {
+            const row = table.insertRow();
+            const valuePerWeek = item.weeks > 0 ? +(item.avg / item.weeks).toFixed(2) : 0;
+
+            row.insertCell().textContent = item.date;
+            row.insertCell().textContent = item.last;
+            row.insertCell().textContent = item.bid;
+            row.insertCell().textContent = item.ask;
+            row.insertCell().textContent = item.avg;
+            row.insertCell().textContent = item.strike;
+            row.insertCell().textContent = item.weeks;
+            row.insertCell().textContent = valuePerWeek;
+
+            if (dataType === "put") {
+                row.insertCell().textContent = item.strike > 0 ? +((valuePerWeek / item.strike) * 100).toFixed(2) : 0;
+            }
+        });
+    }
+</script>
+
 </body>
 </html>
