@@ -62,7 +62,9 @@
 
             // Set default filter values
             const filterInput = document.getElementById("strikeFilter");
-            filterInput.value = dataType === "put" ? 100 : 0; // put=100, call=0
+            if (!filterInput.value) {
+                filterInput.value = dataType === "put" ? 100 : 0;
+            }
 
             const strikeFilter = parseFloat(filterInput.value);
 
