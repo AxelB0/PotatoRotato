@@ -14,7 +14,9 @@
 <button onclick="extractJSON('put')">PUT JSON</button>
 <button onclick="addWeeksToData()">Calculate Weeks</button>
 <button onclick="copyJSON()">Copy JSON</button>
-<a href="index2.html"><button type="button">Next page</button></a>
+<a href="index2.html">
+    <button type="button">Next page</button>
+</a>
 
 <div id="copyNotice">Copied to clipboard</div>
 
@@ -34,7 +36,10 @@
         transition: opacity 0.4s;
         font-family: sans-serif;
     }
-    #copyNotice.show { opacity: 1; }
+
+    #copyNotice.show {
+        opacity: 1;
+    }
 </style>
 
 <script>
@@ -42,27 +47,39 @@
     let persistentYear = "";
 
     // safe parsing functions
-    function num(v) { if (!v || v === '--' || v === '-') return 0; const n=parseFloat(v); return isNaN(n)?0:n; }
-    function int(v) { if (!v || v === '--' || v === '-') return 0; const n=parseInt(v); return isNaN(n)?0:n; }
+    function num(v) {
+        if (!v || v === '--' || v === '-') return 0;
+        const n = parseFloat(v);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function int(v) {
+        if (!v || v === '--' || v === '-') return 0;
+        const n = parseInt(v);
+        return isNaN(n) ? 0 : n;
+    }
 
     // check if all numeric values are zero
-    function isEmptyOption(o){
+    function isEmptyOption(o) {
         return o.last === 0 && o.bid === 0 && o.ask === 0 && o.volume === 0 && o.openInterest === 0;
     }
 
     // parse CALL or PUT data
-    function extractJSON(type){
+    function extractJSON(type) {
         const raw = document.getElementById('rawInput').value;
         const lines = raw.split('\n');
         const results = [];
 
-        for (let line of lines){
+        for (let line of lines) {
             line = line.trim();
             if (!line) continue;
 
             // detect expiration header
             const headerMatch = line.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s(\d{1,2}),\s(\d{4})/);
-            if (headerMatch) { persistentYear = headerMatch[3]; continue; }
+            if (headerMatch) {
+                persistentYear = headerMatch[3];
+                continue;
+            }
 
             // detect option rows starting with month abbreviation
             if (!/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{1,2}/.test(line)) continue;
@@ -73,52 +90,54 @@
             const date = `${cols[0]} ${cols[1]} ${persistentYear}`;
             const strike = parseFloat(cols[8]);
 
-            if (type === "call"){
+            if (type === "call") {
                 const call = {
                     type: "call", date, strike,
                     last: num(cols[2]), change: num(cols[3]),
                     bid: num(cols[4]), ask: num(cols[5]),
                     volume: int(cols[6]), openInterest: int(cols[7]),
-                    avg: +((num(cols[4])+num(cols[5]))/2).toFixed(2)
+                    avg: +((num(cols[4]) + num(cols[5]) + num(cols[2])) / 3).toFixed(2)
                 };
                 if (!isEmptyOption(call)) results.push(call);
             }
 
-            if (type === "put"){
+            if (type === "put") {
                 const put = {
                     type: "put", date, strike,
                     last: num(cols[9]), change: num(cols[10]),
                     bid: num(cols[11]), ask: num(cols[12]),
                     volume: int(cols[13]), openInterest: int(cols[14]),
-                    avg: +((num(cols[11])+num(cols[12]))/2).toFixed(2)
+                    avg: +((num(cols[11]) + num(cols[12]) + num(cols[9])) / 3).toFixed(2)
                 };
                 if (!isEmptyOption(put)) results.push(put);
             }
         }
 
         cumulativeResults = cumulativeResults.concat(results);
-        document.getElementById("output").textContent = JSON.stringify(cumulativeResults,null,2);
+        document.getElementById("output").textContent = JSON.stringify(cumulativeResults, null, 2);
     }
 
     // add weeks until expiration
-    function addWeeksToData(){
+    function addWeeksToData() {
         const now = new Date();
-        cumulativeResults = cumulativeResults.map(row=>{
+        cumulativeResults = cumulativeResults.map(row => {
             const expiration = new Date(row.date);
             const diffMs = expiration - now;
-            const weeks = diffMs / (1000*60*60*24*7);
+            const weeks = diffMs / (1000 * 60 * 60 * 24 * 7);
             return {...row, weeks: Math.max(0, Math.floor(weeks))};
         });
-        document.getElementById("output").textContent = JSON.stringify(cumulativeResults,null,2);
+        document.getElementById("output").textContent = JSON.stringify(cumulativeResults, null, 2);
     }
 
     // copy JSON to clipboard
-    function copyJSON(){
+    function copyJSON() {
         const text = document.getElementById("output").textContent;
         navigator.clipboard.writeText(text);
         const notice = document.getElementById("copyNotice");
         notice.classList.add("show");
-        setTimeout(()=>{notice.classList.remove("show");},2000);
+        setTimeout(() => {
+            notice.classList.remove("show");
+        }, 2000);
     }
 </script>
 </body>
